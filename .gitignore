@@ -37,3 +37,16 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# System files
+_targets/*
+*/shape_files/*
+*/_data/*
+
+# Shape files
+*.cpg
+*.dbf
+*.prj
+*.shp
+*.shx
+
