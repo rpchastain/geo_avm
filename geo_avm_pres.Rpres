@@ -1,0 +1,61 @@
+geo_avm_pres
+========================================================
+author: 
+date: 
+autosize: true
+
+First Slide
+========================================================
+
+```{r preamble, echo = FALSE, message=FALSE, warning=FALSE}
+library(data.table)
+library(targets)
+library(ggplot2)
+library(tidyverse)
+library(tidytable)
+library(sp)
+library(raster)
+library(leaflet)
+
+results_dt <- rbindlist(tar_read('model_results'))
+parcel_shp <- tar_read('parcel_shp')
+
+results_dt[ , error := (actual_vals - rf_predicted)]
+
+tested_prop_shp <- parcel_shp[parcel_shp@data$OBJECTID %in% results_dt$test_prop & parcel_shp@data$REGION == 'SETM', ]
+
+test_shp_set_1 <- tested_prop_shp
+test_shp_set_1@data <- merge(x = tested_prop_shp@data, results_dt[feature_set == 'set_1'], by.x = 'OBJECTID', by.y = 'test_prop')
+
+test_shp_set_4 <- tested_prop_shp
+test_shp_set_4@data <- merge(x = tested_prop_shp@data, results_dt[feature_set == 'set_4'], by.x = 'OBJECTID', by.y = 'test_prop')
+
+
+
+```
+
+For more details on authoring R presentations please visit <https://support.rstudio.com/hc/en-us/articles/200486468>.
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+Slide With Code
+========================================================
+
+```{r}
+summary(test_shp_set_4@data )
+```
+
+Slide With Plot
+========================================================
+
+```{r, echo=FALSE}
+
+leaflet() %>% 
+  setView(lng = mean(extent(test_shp_set_4)[1:2]), lat = mean(extent(test_shp_set_4)[3:4]), zoom = 12) %>%
+  addProviderTiles("Esri.WorldGrayCanvas", options = tileOptions(minZoom=10, maxZoom=16)) %>%
+  addPolygons(data = test_shp_set_4)
+
+
+```

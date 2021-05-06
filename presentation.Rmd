@@ -1,0 +1,284 @@
+---
+title: "Predicting Home Prices with Geographic features"
+author: "Robert Chastain"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE, cache = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+library(data.table)
+library(targets)
+library(ggplot2)
+library(tidyverse)
+library(tidytable)
+library(sp)
+library(raster)
+library(xtable)
+library(leaflet)
+```
+
+```{r load_data, warning=FALSE, cache = FALSE, include=FALSE}
+results_dt <- rbindlist(tar_read('model_results'))
+parcel_shp <- tar_read('parcel_shp')
+elev_raster <- tar_read('elev_raster')
+noise_raster <- tar_read('noise_raster_large')
+
+results_dt[ , error := (actual_vals - rf_predicted)]
+
+
+ppe10_df_plot <- results_dt %>%
+  group_by(test_month, feature_set) %>%
+  summarise(ppe10 = sum(abs(error)/actual_vals < 0.1)/n()) 
+
+ppe10_df_chart <- ppe10_df_plot %>%
+  spread(key = test_month, value = ppe10)
+
+mdae_df_plot <- results_dt %>%
+  group_by(test_month, feature_set) %>%
+  summarise(mdae = median(abs(error)))
+
+mdae_df_chart <- mdae_df_plot %>%
+  spread(key = test_month, value = mdae)
+
+mae_df_plot <- results_dt %>%
+  group_by(test_month, feature_set) %>%
+  summarise(mae = mean(abs(error))) 
+
+mae_df_chart <- mae_df_plot %>%
+  spread(key = test_month, value = mae)
+
+
+tested_prop_shp <- parcel_shp[parcel_shp@data$OBJECTID %in% results_dt$test_prop & parcel_shp@data$REGION == 'SETM', ]
+
+test_shp_set_1 <- tested_prop_shp
+test_shp_set_1@data <- merge(x = tested_prop_shp@data, results_dt[feature_set == 'set_1'], by.x = 'OBJECTID', by.y = 'test_prop')
+
+test_shp_set_4 <- tested_prop_shp
+test_shp_set_4@data <- merge(x = tested_prop_shp@data, results_dt[feature_set == 'set_4'], by.x = 'OBJECTID', by.y = 'test_prop')
+
+```
+
+## Introduction
+
+ * Determining the value of a house with an appraisal is an expensive and time consuming process
+ * In today's hot housing market appraisal times have increased from a week to more than a month, and prices have increased from about \$300 to \$500
+ * Alternative valuation methods are becoming much more popular, including Automated Valuation Methods (AVM)
+ * <span style='color: blue;'>Can AVM accuracy be increased with the addition of geographic features?</span>
+ 
+## Housing Data
+
+<div class='left' style='float:left;width:48%'>
+ 
+ * Location
+ * Sale Price and Date
+ * Lot size
+ * Square footage 
+ * Bedroom count
+ * Bathroom count
+
+</div>
+<div class='right' style='float:right;width:48%'>
+```{r example_raster, echo = FALSE, eval = TRUE, cache = FALSE}
+leaflet() %>% 
+  setView(lng = mean(extent(test_shp_set_1)[1:2]), lat = mean(extent(test_shp_set_1)[3:4]), zoom = 12) %>%
+  addProviderTiles("Esri.WorldGrayCanvas", options = tileOptions(minZoom=10, maxZoom=16)) %>%
+  addPolygons(data = test_shp_set_1, color = 'blue', weight = 0.4,
+              popup = paste0(
+                "<b>Sale Price and Date: </b>",
+                paste(test_shp_set_1@data$SALEPRICE, test_shp_set_1@data$SALEDATE),
+                "<br>",
+                "<b>Lot size: </b>",
+                test_shp_set_1@data$ACREAGE,
+                "<br>",
+                "<b>Square footage: </b>",
+                test_shp_set_1@data$SQFEET,
+                "<br>",
+                "<b>Bedroom count: </b>",
+                test_shp_set_1@data$BEDROOMS,
+                "<br>",
+                "<b>Bathroom count: </b>",
+                test_shp_set_1@data$BATHS,
+                "<br>"
+              ),
+              popupOptions = popupOptions(maxWidth ="100%", closeOnClick = TRUE)
+  ) 
+```
+</div>
+
+## Elevation Data
+
+<div class='left' style='float:left;width:48%'>
+ 
+ * Elevation
+ * Derived features:
+   * Slope
+   * Roughness
+   * Aspect
+   * Northness
+   * Eastness
+
+</div>
+<div class='right' style='float:right;width:48%'>
+```{r elev_example_raster, echo = FALSE, eval = TRUE, cache = FALSE}
+plot_raster <- crop(elev_raster@layers[[6]], extent(test_shp_set_1))
+
+leaflet() %>% 
+  setView(lng = mean(extent(test_shp_set_1)[1:2]), lat = mean(extent(test_shp_set_1)[3:4]), zoom = 12) %>%
+  addProviderTiles("Esri.WorldGrayCanvas", options = tileOptions(minZoom=10, maxZoom=16)) %>%
+  addRasterImage(plot_raster, opacity = 0.45) %>% 
+  addPolygons(data = test_shp_set_1, color = 'blue', weight = 0.5)
+```
+</div>
+
+## Noise Data
+
+
+<div class='left' style='float:left;width:48%'>
+ 
+ * Road Noise
+ * Aviation
+ * Transformed into $500^2$ meter resolution  
+ 
+ 
+</div>
+<div class='right' style='float:right;width:48%'>
+```{r noise_raster, echo = FALSE, eval = TRUE}
+
+
+leaflet() %>% 
+  setView(lng = mean(extent(test_shp_set_1)[1:2]), lat = mean(extent(test_shp_set_1)[3:4]), zoom = 12) %>%
+  addProviderTiles("Esri.WorldGrayCanvas", options = tileOptions(minZoom=10, maxZoom=16)) %>%
+  addRasterImage(noise_raster[[2]], opacity = 0.45) %>% 
+  addPolygons(data = test_shp_set_1, color = 'blue', weight = 0.5)
+```
+</div>
+
+
+## Feature Sets
+
+To test if geographic features could improve an AVM, six feature sets were tested:
+
+  1. Only housing data
+  1. Housing data, elevation
+  1. Housing data, elevation and derived features
+  1. Housing data, elevation and derived features, noise data
+  1. Elevation and derived features, noise data
+  1. Elevation and derived features
+
+## Methodology
+
+AVM
+
+  * Simple random forest from the __randomForest__ package
+  * Default settings and configurations
+
+Create train/test split
+
+  * Training - 12 month of sales data (_i.e._ Jan 1, 2019-Dec 31, 2019)
+  * Test - Sales data from the month after the last month of training data (_i.e._ Jan 1, 2020-Jan 31, 2020)
+
+Imputation
+  
+  * Raster data imputed using the __bilinear__ method
+  * Housing data imputed using random forest __na.roughfix__ method
+
+## Evaluation metrics
+
+  * PPE 10 - Percentage of property error less than 10\%
+    * Property percentage error (PPE) calculated as: $$\frac{|(Predicted Value - Sale Price)|}{Sale Price}$$
+    * PPE 10 calculated as the percentage of PPE < 10\%
+  * Mean Absolute Error
+  * Median Absolute Error
+  
+## Results - PPE 10
+
+
+```{r ppe_10_plot, echo = FALSE}
+
+ ggplot(data = ppe10_df_plot, aes(x = test_month, y = ppe10, color = feature_set, linetype = feature_set)) +
+  geom_line() + ggtitle('PPE 10 by month and feature set')
+
+```
+
+
+
+## Results - Median Absolute Error
+
+
+```{r mdae_10_plot, echo = FALSE}
+
+ ggplot(data = mdae_df_plot, aes(x = test_month, y = mdae, color = feature_set, linetype = feature_set)) +
+  geom_line() + ggtitle('Median Absolute Error by month and feature set')
+
+```
+
+
+
+## Results - Mean Absolute Error
+
+```{r mae_10_plot}
+
+ ggplot(data = mae_df_plot, aes(x = test_month, y = mae, color = feature_set, linetype = feature_set)) +
+  geom_line() + ggtitle('Mean Absolute Error by month and feature set')
+
+```
+
+
+## Comparison of feature set 1 and 4
+
+<div class='left' style='float:left;width:48%'>
+```{r set_4, echo = FALSE, eval = TRUE}
+error_col <- leaflet::colorQuantile('Blues', domain = test_shp_set_4@data$error, na.color = 'red')
+
+leaflet() %>% 
+  setView(lng = mean(extent(test_shp_set_4)[1:2]), lat = mean(extent(test_shp_set_4)[3:4]), zoom = 12) %>%
+  addProviderTiles("Esri.WorldGrayCanvas", options = tileOptions(minZoom=10, maxZoom=16)) %>%
+  addPolygons(
+    data = test_shp_set_4, 
+    color = ~error_col(error),
+    popup = paste0(
+                 "<b>Sale Price: </b>",
+                 test_shp_set_4@data$SALEPRICE,
+                 "<br>",
+                 "<b>Estimate: </b>",
+                 round(test_shp_set_4@data$rf_predicted, 0),
+                 "<br>",
+                 "<b>Error %: </b>",
+                 round((test_shp_set_4@data$SALEPRICE - test_shp_set_4@data$rf_predicted)/test_shp_set_4@data$SALEPRICE,3) * 100
+               ),
+              popupOptions = popupOptions(maxWidth ="100%", closeOnClick = TRUE)
+  ) 
+
+
+```
+</div>
+<div class='right' style='float:right;width:48%'>
+```{r set_1, echo = FALSE, eval = TRUE}
+error_col <- leaflet::colorQuantile('Blues', domain = test_shp_set_1@data$error, na.color = 'red')
+
+leaflet() %>% 
+  setView(lng = mean(extent(test_shp_set_1)[1:2]), lat = mean(extent(test_shp_set_1)[3:4]), zoom = 12) %>%
+  addProviderTiles("Esri.WorldGrayCanvas", options = tileOptions(minZoom=10, maxZoom=16)) %>%
+  addPolygons(
+    data = test_shp_set_1, 
+    color = ~error_col(error),
+    popup = paste0(
+                 "<b>Sale Price: </b>",
+                 test_shp_set_1@data$SALEPRICE,
+                 "<br>",
+                 "<b>Estimate: </b>",
+                 round(test_shp_set_1@data$rf_predicted, 0),
+                 "<br>",
+                 "<b>Error %: </b>",
+                 round((test_shp_set_1@data$SALEPRICE - test_shp_set_1@data$rf_predicted)/test_shp_set_1@data$SALEPRICE,3) * 100
+               ),
+              popupOptions = popupOptions(maxWidth ="100%", closeOnClick = TRUE)
+  ) 
+
+```
+</div>
+
+

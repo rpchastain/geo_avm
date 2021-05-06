@@ -1,0 +1,41 @@
+actual,public,sfr,mobile,mfr,apartment,commercial,industrial,unbuildable,vacant,minor_imp,
+100,,,,,,,,,1,,"Vacant, other or unknown"
+110,,,,,,,,,1,,"Vacant, under development"
+120,,1,,,,,,,1,,"Vacant, single family"
+130,,,,1,1,,,,1,,"Vacant, multi-residential"
+140,,,,,,1,,,1,,"Vacant, commercial"
+150,,,,,,,1,,1,,"Vacant, industrial"
+160,,,,,,,,1,0,,"Splinter, unbuildable: small size or shape"
+170,,,,,,,,1,0,,"Other, unbuildable: roads, restrictions, terrain"
+180,,,,,,,,,,1,"Minor Imps: wells, septics, outbldg.,parking"
+190,1,,,,,,,,1,,Public Parks: vacant or improved
+200,,1,,,,,,,,,Single Family Residence
+210,,,,1,1,,,,,,Condominium or Townhouse
+220,,,1,,,,,,,,Mobile Home: Converted to Real Property
+230,,,1,,,,,,,,Mobile Home: Personal Property
+240,1,,,,,,,,,,Common Area
+250,,,,1,1,,,,,,Condo or Townhouse valued as apartment use
+300,,,,1,,,,,,,Duplex
+310,,,,1,,,,,,,Two Single Family Units
+320,,,,1,,,,,,,Three or four Units
+330,,,,1,1,,,,,,Five to Nine Units
+340,,,,,1,1,,,,,Ten or more units
+350,,,1,,,1,,,,,Mobile home park: ten or more mobile home units
+360,,,,,,0,,,,1,"Multi-Residential Parking, etc."
+400,,,,,,1,,,,,"General Commercial: retail, mixed, parking, school"
+410,,,,,,1,,,,,"Offices, professional and business, banks, etc."
+420,,,,,,1,,,,,Casino or hotel casino
+430,,,,,,1,,,,,Commercial hotel or motel
+440,1,,,,,1,,,,,"Resort commercial: ski, golf, sports, etc."
+500,,,,,,1,1,,,,"General industrial: light indust, trucking, warehs"
+510,,,,,,,1,,,,Commercial Industrial: retail or office with Indus
+520,,,,,,,1,,,,"Conc or Blk plant, mills, RR yd, tank farm, etc."
+600,,,,,,,1,,,,Agricultural deferred
+620,,,,,,,,,1,,Open Space qualified
+630,,,,,,,1,,1,,Patented mining claim
+640,,,,,,,1,,1,,Other Mines and Mills
+670,,,,,,,1,,1,,"Aggregates, quarries, etc."
+700,,,,,,,1,,,1,Centrally assessed public utility
+710,,,,,,,1,,,1,Intracounty public utility
+720,,,,,,,1,,,1,Centrally assessed w/part local assessed
+9999,,,,,,,,,1,,INTERIM LUC TO BE CHANGED

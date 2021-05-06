@@ -42,6 +42,9 @@ vignettes/*.pdf
 _targets/*
 */shape_files/*
 */_data/*
+scratch_work/*
+Shape/*
+data/rasters/*
 
 # Shape files
 *.cpg
